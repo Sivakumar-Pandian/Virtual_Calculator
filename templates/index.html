@@ -7,7 +7,7 @@
     <style>
       :root {
         color-scheme: dark;
-        font-family: Georgia, "Times New Roman", serif;
+        font-family: "Trebuchet MS", Verdana, sans-serif;
         background: #111820;
         color: #f6f1e8;
       }
@@ -17,24 +17,25 @@
         min-height: 100vh;
         background: radial-gradient(circle at 15% 10%, #284653 0, #111820 42%, #0b1015 100%);
       }
-      main { width: min(94vw, 1040px); margin: 0 auto; padding: 5vh 0 7vh; }
+      main { width: min(92vw, 900px); margin: 0 auto; padding: 4vh 0 6vh; }
       header { display: flex; align-items: end; justify-content: space-between; gap: 1rem; margin-bottom: 1.5rem; }
       .eyebrow { margin: 0 0 .4rem; color: #8dd6c0; font: 700 .72rem/1.2 system-ui, sans-serif; letter-spacing: .14em; text-transform: uppercase; }
-      h1 { margin: 0; color: #fffaf2; font-size: clamp(2rem, 5vw, 3.8rem); line-height: .95; font-weight: 500; }
+      h1 { margin: 0; color: #fffaf2; font-family: Georgia, "Times New Roman", serif; font-size: clamp(2rem, 5vw, 3.25rem); line-height: .95; font-weight: 500; letter-spacing: .01em; }
       .status { display: inline-flex; align-items: center; gap: .45rem; padding: .55rem .75rem; border: 1px solid #45616c; border-radius: 999px; color: #c6ddd6; font: 600 .78rem system-ui, sans-serif; white-space: nowrap; }
       .status::before { width: .5rem; height: .5rem; border-radius: 50%; background: #8dd6c0; content: ""; box-shadow: 0 0 0 .2rem #8dd6c033; }
-      .stage { overflow: hidden; border: 1px solid #42606a; border-radius: 12px; background: #070b0e; box-shadow: 0 22px 70px #00000066; }
-      .camera { position: relative; min-height: 280px; background: #070b0e; }
-      video, img { display: block; width: 100%; height: auto; min-height: 280px; object-fit: contain; }
+      .stage { width: min(100%, 720px); margin: 0 auto; overflow: hidden; border: 1px solid #42606a; border-radius: 12px; background: #070b0e; box-shadow: 0 22px 70px #00000066; }
+      .camera { position: relative; aspect-ratio: 4 / 3; background: #070b0e; }
+      video, img { display: block; width: 100%; height: 100%; object-fit: contain; }
       video { transform: scaleX(-1); }
       img { position: absolute; inset: 0; }
       .camera-off { display: none; position: absolute; inset: 50% auto auto 50%; transform: translate(-50%, -50%); width: 90%; text-align: center; color: #f6f1e8; font: 1rem/1.5 system-ui, sans-serif; }
-      .instructions { display: flex; justify-content: space-between; gap: 1rem; padding: 1rem 1.15rem; background: #17252c; color: #c7d2d1; font: .9rem/1.45 system-ui, sans-serif; }
+      .instructions { display: flex; justify-content: space-between; gap: 1rem; padding: .85rem 1.15rem; background: #17252c; color: #c7d2d1; font: .82rem/1.45 system-ui, sans-serif; }
       .instructions strong { color: #8dd6c0; }
       .start-camera { margin-top: 1rem; padding: .7rem 1rem; border: 1px solid #8dd6c0; border-radius: 6px; background: #8dd6c0; color: #10201f; cursor: pointer; font: 700 .85rem system-ui, sans-serif; }
       @media (max-width: 600px) {
         main { padding-top: 2.5rem; }
         header { align-items: start; flex-direction: column; }
+        .status { align-self: stretch; justify-content: center; }
         .instructions { flex-direction: column; gap: .35rem; }
       }
     </style>
@@ -71,9 +72,9 @@
       const status = document.getElementById("status");
       const canvas = document.createElement("canvas");
       let stream;
-      let busy = false;
       let sending = false;
       let frameCount = 0;
+      let previousObjectUrl;
 
       function setStatus(message) {
         status.textContent = message;
@@ -81,7 +82,10 @@
 
       async function startCamera() {
         try {
-          stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 15, max: 20 } },
+            audio: false
+          });
           video.srcObject = stream;
           await video.play();
           cameraOff.style.display = "none";
@@ -99,34 +103,31 @@
           setTimeout(() => requestAnimationFrame(sendFrame), 200);
           return;
         }
-        if (!busy && video.videoWidth) {
-          busy = true;
-          const scale = Math.min(1, 480 / video.videoWidth);
-          canvas.width = Math.round(video.videoWidth * scale);
-          canvas.height = Math.round(video.videoHeight * scale);
-          canvas.getContext("2d").drawImage(video, 0, 0);
-          canvas.toBlob(async (blob) => {
-            if (!blob) {
-              busy = false;
-              setStatus("Could not encode camera frame");
-              return;
-            }
-            const data = new FormData();
-            data.append("frame", blob, "camera.jpg");
-            try {
-              const response = await fetch("{{ url_for('process_frame') }}", { method: "POST", body: data });
-              if (!response.ok) throw new Error("Server returned " + response.status);
-              processed.src = URL.createObjectURL(await response.blob());
-              frameCount += 1;
-              setStatus("Camera stream live - processed " + frameCount + " frames");
-            } catch (error) {
-              setStatus("Processing error: " + error.message);
-            } finally {
-              busy = false;
-            }
-          }, "image/jpeg", 0.82);
+        if (!sending || !video.videoWidth) return;
+        const scale = Math.min(1, 640 / video.videoWidth);
+        canvas.width = Math.round(video.videoWidth * scale);
+        canvas.height = Math.round(video.videoHeight * scale);
+        canvas.getContext("2d").drawImage(video, 0, 0, canvas.width, canvas.height);
+        const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.74));
+        if (!blob) {
+          setStatus("Could not encode camera frame");
+          return;
         }
-        setTimeout(() => requestAnimationFrame(sendFrame), 80);
+        const data = new FormData();
+        data.append("frame", blob, "camera.jpg");
+        try {
+          const response = await fetch("{{ url_for('process_frame') }}", { method: "POST", body: data });
+          if (!response.ok) throw new Error("Server returned " + response.status);
+          const nextObjectUrl = URL.createObjectURL(await response.blob());
+          processed.src = nextObjectUrl;
+          if (previousObjectUrl) URL.revokeObjectURL(previousObjectUrl);
+          previousObjectUrl = nextObjectUrl;
+          frameCount += 1;
+          setStatus("Camera stream live - processed " + frameCount + " frames");
+        } catch (error) {
+          setStatus("Processing error: " + error.message);
+        }
+        if (sending) setTimeout(() => requestAnimationFrame(sendFrame), 100);
       }
 
       function beginProcessing() {
