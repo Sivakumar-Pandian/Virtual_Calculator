@@ -46,7 +46,7 @@
           <p class="eyebrow">Computer vision interface</p>
           <h1>Virtual Gesture<br>Calculator</h1>
         </div>
-        <div class="status">Camera stream live</div>
+        <div id="status" class="status">Starting camera...</div>
       </header>
       <section class="stage">
         <div class="camera">
@@ -68,24 +68,34 @@
       const processed = document.getElementById("processed");
       const cameraOff = document.getElementById("camera-off");
       const startButton = document.getElementById("start-camera");
+      const status = document.getElementById("status");
       const canvas = document.createElement("canvas");
       let stream;
       let busy = false;
+      let sending = false;
+
+      function setStatus(message) {
+        status.textContent = message;
+      }
 
       async function startCamera() {
         try {
           stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
           video.srcObject = stream;
           cameraOff.style.display = "none";
-          requestAnimationFrame(sendFrame);
+          setStatus("Camera ready, processing...");
         } catch (error) {
           cameraOff.style.display = "block";
           cameraOff.firstElementChild.textContent = "Camera permission was not granted. Enable it and try again.";
+          setStatus("Camera permission needed");
         }
       }
 
       async function sendFrame() {
-        if (!stream) return;
+        if (!stream || !video.videoWidth) {
+          setTimeout(() => requestAnimationFrame(sendFrame), 200);
+          return;
+        }
         if (!busy && video.videoWidth) {
           busy = true;
           const scale = Math.min(1, 640 / video.videoWidth);
@@ -93,11 +103,20 @@
           canvas.height = Math.round(video.videoHeight * scale);
           canvas.getContext("2d").drawImage(video, 0, 0);
           canvas.toBlob(async (blob) => {
+            if (!blob) {
+              busy = false;
+              setStatus("Could not encode camera frame");
+              return;
+            }
             const data = new FormData();
             data.append("frame", blob, "camera.jpg");
             try {
               const response = await fetch("{{ url_for('process_frame') }}", { method: "POST", body: data });
-              if (response.ok) processed.src = URL.createObjectURL(await response.blob());
+              if (!response.ok) throw new Error("Server returned " + response.status);
+              processed.src = URL.createObjectURL(await response.blob());
+              setStatus("Camera stream live");
+            } catch (error) {
+              setStatus("Processing error: " + error.message);
             } finally {
               busy = false;
             }
@@ -106,8 +125,20 @@
         setTimeout(() => requestAnimationFrame(sendFrame), 80);
       }
 
+      video.addEventListener("playing", () => {
+        if (!sending) {
+          sending = true;
+          requestAnimationFrame(sendFrame);
+        }
+      });
       startButton.addEventListener("click", startCamera);
-      startCamera();
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        cameraOff.style.display = "block";
+        cameraOff.firstElementChild.textContent = "This browser does not support webcam access.";
+        setStatus("Browser camera unavailable");
+      } else {
+        startCamera();
+      }
     </script>
   </body>
 </html>
