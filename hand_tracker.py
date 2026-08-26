@@ -24,6 +24,9 @@ class HandTracker:
         """Create one MediaPipe Hands pipeline for the application's lifetime."""
         hands_module = mp.solutions.hands
         self._hands = hands_module.Hands(
+            static_image_mode=False,
+            max_num_hands=1,
+            model_complexity=0,
             min_detection_confidence=DETECTION_CONFIDENCE,
             min_tracking_confidence=TRACKING_CONFIDENCE,
         )
