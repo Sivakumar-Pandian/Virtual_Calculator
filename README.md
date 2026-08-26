@@ -52,8 +52,9 @@ This virtual calculator uses your **webcam** to detect your **hand movements** a
 > ⚠️ Make sure your webcam is connected.
 
 ```bash
-pip install opencv-python mediapipe numpy
-python virtual_calculator.py
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements.txt
+.venv/bin/python main.py
 ```
 
 ## 🧽 Future Upgrades
