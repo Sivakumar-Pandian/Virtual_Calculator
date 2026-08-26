@@ -2,3 +2,4 @@ mediapipe==0.10.21
 opencv-contrib-python==4.11.0.86
 numpy==1.26.4
 Flask>=3.0,<4.0
+gunicorn>=23.0,<24.0
