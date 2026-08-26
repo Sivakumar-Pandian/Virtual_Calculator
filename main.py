@@ -8,11 +8,7 @@ import numpy as np
 
 from calculator_ui import CalculatorUI
 from config import (
-    BLACK,
     CLICK_DEBOUNCE_SECONDS,
-    EXPRESSION_FONT_SCALE,
-    EXPRESSION_POSITION,
-    FONT_THICKNESS,
     PINCH_RELEASE_MULTIPLIER,
     PINCH_REQUIRED_FRAMES,
     PINCH_DISTANCE_THRESHOLD,
@@ -43,16 +39,7 @@ class GestureCalculatorApp:
             raise RuntimeError("Unable to read a frame from the webcam.")
         frame = cv2.flip(frame, 1)
         self._process_gesture(frame)
-        self.calculator_ui.draw(frame)
-        cv2.putText(
-            frame,
-            self.evaluator.expression,
-            EXPRESSION_POSITION,
-            cv2.FONT_HERSHEY_SIMPLEX,
-            EXPRESSION_FONT_SCALE,
-            BLACK,
-            FONT_THICKNESS,
-        )
+        self.calculator_ui.draw(frame, self.evaluator.expression)
         success, encoded_frame = cv2.imencode(".jpg", frame)
         if not success:
             raise RuntimeError("Unable to encode webcam frame as JPEG.")

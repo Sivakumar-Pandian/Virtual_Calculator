@@ -9,6 +9,8 @@ from config import (
     BLACK,
     BUTTON_CONFIGS,
     BUTTON_SIZE,
+    EXPRESSION_FONT_SCALE,
+    EXPRESSION_POSITION,
     FRAME_WEIGHT,
     FONT_THICKNESS,
     LABEL_FONT_SCALE,
@@ -46,13 +48,14 @@ class CalculatorButton:
         )[0]
         label_x = x + (self.size - label_size[0]) // 2
         label_y = y + (self.size + label_size[1]) // 2
+        text_color = BLACK if self.color == (255, 255, 255) else (255, 255, 255)
         cv2.putText(
             overlay,
             self.label,
             (label_x, label_y),
             cv2.FONT_HERSHEY_SIMPLEX,
             LABEL_FONT_SCALE,
-            BLACK,
+            text_color,
             FONT_THICKNESS,
         )
 
@@ -64,14 +67,26 @@ class CalculatorUI:
         """Build button objects from configuration for a stable, testable layout."""
         self.buttons = [CalculatorButton(config) for config in button_configs]
 
-    def draw(self, frame: np.ndarray) -> None:
-        """Draw a readable calculator panel over the camera frame."""
+    def draw(self, frame: np.ndarray, expression: str = "") -> None:
+        """Draw a readable calculator card and display over the camera frame."""
         overlay = frame.copy()
-        cv2.rectangle(overlay, (30, 25), (345, 355), (245, 248, 250), -1)
+        cv2.rectangle(overlay, (28, 22), (334, 382), (22, 31, 37), -1)
+        cv2.rectangle(overlay, (45, 42), (317, 94), (8, 14, 18), -1)
         for button in self.buttons:
             button.draw(frame, overlay)
-        cv2.addWeighted(overlay, OVERLAY_WEIGHT, frame, FRAME_WEIGHT, 0, frame)
-        cv2.rectangle(frame, (30, 25), (345, 355), (255, 255, 255), 2)
+        cv2.addWeighted(overlay, 0.88, frame, 0.12, 0, frame)
+        cv2.rectangle(frame, (28, 22), (334, 382), (141, 214, 194), 2)
+        cv2.rectangle(frame, (45, 42), (317, 94), (76, 105, 111), 1)
+        display_text = expression or "0"
+        cv2.putText(
+            frame,
+            display_text[-24:],
+            EXPRESSION_POSITION,
+            cv2.FONT_HERSHEY_SIMPLEX,
+            EXPRESSION_FONT_SCALE,
+            (245, 250, 247),
+            FONT_THICKNESS,
+        )
 
     def button_at(self, point: Position) -> Optional[CalculatorButton]:
         """Return the first button containing a point, preserving layout order."""
