@@ -65,16 +65,17 @@ Create a Render Web Service connected to the `main` branch. Leave **Root Directo
 
 ```text
 Build Command: pip install -r requirements.txt
-Start Command: gunicorn --bind 0.0.0.0:$PORT app:app
-Start Command: gunicorn --bind 0.0.0.0:$PORT --timeout 120 app:app
+Start Command: gunicorn --bind 0.0.0.0:$PORT --worker-class gthread --threads 2 --timeout 120 app:app
 ```
 
 In Render's **Environment Variables**, add `PYTHON_VERSION` with the value `3.12.8`. This is required because the pinned MediaPipe dependency does not support Render's default Python 3.14 runtime. No secret keys or other environment variables are required. After saving the variable, trigger a new deploy.
 
+If this service already exists, update its Start Command manually to the command above. The included `render.yaml` stores the same configuration for future Blueprint deployments. The `WORKER TIMEOUT` message means the old 30-second Gunicorn command is still active; it is not fixed by refreshing the browser.
+
 ## Why Flask and Browser Camera Capture?
 
 * Flask serves the calculator UI and exposes the webcam stream through a normal HTTP endpoint.
-* The `/video_feed` route yields each processed OpenCV frame as a JPEG.
+* The `/process_frame` route receives each browser-captured frame and returns the processed JPEG.
 * The browser requests webcam permission, captures frames with `getUserMedia()`, and sends JPEG snapshots to Flask.
 * Flask processes each snapshot with OpenCV and MediaPipe, then returns the processed JPEG for display in the page.
 * This works on localhost and on Render because the camera belongs to the user's browser, not the server.
