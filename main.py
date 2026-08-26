@@ -21,8 +21,7 @@ class GestureCalculatorApp:
     """Coordinates camera input, gesture clicks, calculator state, and cleanup."""
 
     def __init__(self) -> None:
-        """Create owned components and initialize debounce state without global state."""
-        self.capture = cv2.VideoCapture(0)
+        """Create owned components and initialize debounce state."""
         self.hand_tracker = HandTracker()
         self.calculator_ui = CalculatorUI()
         self.evaluator = ExpressionEvaluator()
@@ -30,13 +29,8 @@ class GestureCalculatorApp:
         self.last_click_time = 0.0
         self.pinch_frames = 0
 
-    def get_frame(self) -> bytes:
-        """Process one webcam frame and return it as a JPEG byte string."""
-        if not self.capture.isOpened():
-            raise RuntimeError("Unable to open webcam. Check that a camera is connected.")
-        success, frame = self.capture.read()
-        if not success:
-            raise RuntimeError("Unable to read a frame from the webcam.")
+    def process_frame(self, frame: np.ndarray) -> bytes:
+        """Process a browser-provided frame and return it as JPEG bytes."""
         frame = cv2.flip(frame, 1)
         self._process_gesture(frame)
         self.calculator_ui.draw(frame, self.evaluator.expression)
@@ -47,8 +41,6 @@ class GestureCalculatorApp:
 
     def close(self) -> None:
         """Release webcam and hand-tracking resources safely and only once."""
-        if self.capture.isOpened():
-            self.capture.release()
         self.hand_tracker.close()
 
     def _process_gesture(self, frame: np.ndarray) -> bool:

@@ -1,25 +1,16 @@
 """Flask web server for the gesture-controlled calculator."""
 
 import atexit
-from typing import Iterator
 
 from flask import Flask, Response, render_template
+import cv2
+import numpy as np
+from flask import jsonify, request
 
 from main import GestureCalculatorApp
 
 app = Flask(__name__)
 calculator = GestureCalculatorApp()
-
-
-def generate_frames() -> Iterator[bytes]:
-    """Yield processed webcam frames in the browser's MJPEG format."""
-    while True:
-        try:
-            frame = calculator.get_frame()
-        except RuntimeError as error:
-            print(f"Error: {error}")
-            break
-        yield b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + frame + b"\r\n"
 
 
 def cleanup() -> None:
@@ -36,13 +27,18 @@ def index() -> str:
     return render_template("index.html")
 
 
-@app.get("/video_feed")
-def video_feed() -> Response:
-    """Stream processed frames as an MJPEG response."""
-    return Response(
-        generate_frames(),
-        mimetype="multipart/x-mixed-replace; boundary=frame",
+@app.post("/process_frame")
+def process_frame() -> Response:
+    """Process one webcam frame captured by the browser."""
+    uploaded_frame = request.files.get("frame")
+    if uploaded_frame is None:
+        return jsonify(error="No frame was uploaded."), 400
+    frame = cv2.imdecode(
+        np.frombuffer(uploaded_frame.read(), dtype=np.uint8), cv2.IMREAD_COLOR
     )
+    if frame is None:
+        return jsonify(error="The uploaded frame is not a valid image."), 400
+    return Response(calculator.process_frame(frame), mimetype="image/jpeg")
 
 
 if __name__ == "__main__":

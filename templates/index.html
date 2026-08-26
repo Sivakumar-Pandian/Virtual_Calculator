@@ -24,9 +24,14 @@
       .status { display: inline-flex; align-items: center; gap: .45rem; padding: .55rem .75rem; border: 1px solid #45616c; border-radius: 999px; color: #c6ddd6; font: 600 .78rem system-ui, sans-serif; white-space: nowrap; }
       .status::before { width: .5rem; height: .5rem; border-radius: 50%; background: #8dd6c0; content: ""; box-shadow: 0 0 0 .2rem #8dd6c033; }
       .stage { overflow: hidden; border: 1px solid #42606a; border-radius: 12px; background: #070b0e; box-shadow: 0 22px 70px #00000066; }
-      img { display: block; width: 100%; height: auto; min-height: 280px; object-fit: contain; }
+      .camera { position: relative; min-height: 280px; background: #070b0e; }
+      video, img { display: block; width: 100%; height: auto; min-height: 280px; object-fit: contain; }
+      video { transform: scaleX(-1); }
+      img { position: absolute; inset: 0; }
+      .camera-off { display: none; position: absolute; inset: 50% auto auto 50%; transform: translate(-50%, -50%); width: 90%; text-align: center; color: #f6f1e8; font: 1rem/1.5 system-ui, sans-serif; }
       .instructions { display: flex; justify-content: space-between; gap: 1rem; padding: 1rem 1.15rem; background: #17252c; color: #c7d2d1; font: .9rem/1.45 system-ui, sans-serif; }
       .instructions strong { color: #8dd6c0; }
+      .start-camera { margin-top: 1rem; padding: .7rem 1rem; border: 1px solid #8dd6c0; border-radius: 6px; background: #8dd6c0; color: #10201f; cursor: pointer; font: 700 .85rem system-ui, sans-serif; }
       @media (max-width: 600px) {
         main { padding-top: 2.5rem; }
         header { align-items: start; flex-direction: column; }
@@ -44,12 +49,64 @@
         <div class="status">Camera stream live</div>
       </header>
       <section class="stage">
-        <img src="{{ url_for('video_feed') }}" alt="Live gesture calculator video feed">
+        <div class="camera">
+          <video id="camera" autoplay muted playsinline></video>
+          <img id="processed" alt="Processed gesture calculator video feed">
+          <div id="camera-off" class="camera-off">
+            <div>Camera access is needed for the gesture calculator.</div>
+            <button id="start-camera" class="start-camera" type="button">Enable camera</button>
+          </div>
+        </div>
         <div class="instructions">
           <span><strong>Gesture:</strong> pinch index + middle finger to click</span>
           <span><strong>Reset:</strong> use the CLR button</span>
         </div>
       </section>
     </main>
+    <script>
+      const video = document.getElementById("camera");
+      const processed = document.getElementById("processed");
+      const cameraOff = document.getElementById("camera-off");
+      const startButton = document.getElementById("start-camera");
+      const canvas = document.createElement("canvas");
+      let stream;
+      let busy = false;
+
+      async function startCamera() {
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+          video.srcObject = stream;
+          cameraOff.style.display = "none";
+          requestAnimationFrame(sendFrame);
+        } catch (error) {
+          cameraOff.style.display = "block";
+          cameraOff.firstElementChild.textContent = "Camera permission was not granted. Enable it and try again.";
+        }
+      }
+
+      async function sendFrame() {
+        if (!stream) return;
+        if (!busy && video.videoWidth) {
+          busy = true;
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          canvas.getContext("2d").drawImage(video, 0, 0);
+          canvas.toBlob(async (blob) => {
+            const data = new FormData();
+            data.append("frame", blob, "camera.jpg");
+            try {
+              const response = await fetch("{{ url_for('process_frame') }}", { method: "POST", body: data });
+              if (response.ok) processed.src = URL.createObjectURL(await response.blob());
+            } finally {
+              busy = false;
+            }
+          }, "image/jpeg", 0.82);
+        }
+        setTimeout(() => requestAnimationFrame(sendFrame), 80);
+      }
+
+      startButton.addEventListener("click", startCamera);
+      startCamera();
+    </script>
   </body>
 </html>

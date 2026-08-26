@@ -70,12 +70,15 @@ Start Command: gunicorn --bind 0.0.0.0:$PORT app:app
 
 In Render's **Environment Variables**, add `PYTHON_VERSION` with the value `3.12.8`. This is required because the pinned MediaPipe dependency does not support Render's default Python 3.14 runtime. No secret keys or other environment variables are required. After saving the variable, trigger a new deploy.
 
-## Why Flask and MJPEG?
+## Why Flask and Browser Camera Capture?
 
 * Flask serves the calculator UI and exposes the webcam stream through a normal HTTP endpoint.
 * The `/video_feed` route yields each processed OpenCV frame as a JPEG.
-* Flask wraps those JPEGs in a `multipart/x-mixed-replace` response, so the browser updates the `<img>` continuously without JavaScript or a native OpenCV window.
-* This keeps camera capture, hand tracking, and rendering on the server while making the result accessible from any browser on the local machine.
+* The browser requests webcam permission, captures frames with `getUserMedia()`, and sends JPEG snapshots to Flask.
+* Flask processes each snapshot with OpenCV and MediaPipe, then returns the processed JPEG for display in the page.
+* This works on localhost and on Render because the camera belongs to the user's browser, not the server.
+
+MJPEG is commonly used for server-side camera streams, but it cannot access a laptop webcam from a remote Render server. The browser-capture approach is the correct architecture for a hosted demo.
 
 ## 🧽 Future Upgrades
 
