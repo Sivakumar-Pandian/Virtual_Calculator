@@ -65,11 +65,13 @@ class CalculatorUI:
         self.buttons = [CalculatorButton(config) for config in button_configs]
 
     def draw(self, frame: np.ndarray) -> None:
-        """Draw all buttons with the same translucent overlay as the original UI."""
+        """Draw a readable calculator panel over the camera frame."""
         overlay = frame.copy()
+        cv2.rectangle(overlay, (30, 25), (345, 355), (245, 248, 250), -1)
         for button in self.buttons:
             button.draw(frame, overlay)
         cv2.addWeighted(overlay, OVERLAY_WEIGHT, frame, FRAME_WEIGHT, 0, frame)
+        cv2.rectangle(frame, (30, 25), (345, 355), (255, 255, 255), 2)
 
     def button_at(self, point: Position) -> Optional[CalculatorButton]:
         """Return the first button containing a point, preserving layout order."""

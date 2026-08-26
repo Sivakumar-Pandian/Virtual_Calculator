@@ -19,11 +19,13 @@ class ButtonConfig:
 BUTTON_SIZE: Final[int] = 60
 PINCH_DISTANCE_THRESHOLD: Final[float] = 30.0
 CLICK_DEBOUNCE_SECONDS: Final[float] = 0.3
+PINCH_REQUIRED_FRAMES: Final[int] = 2
+PINCH_RELEASE_MULTIPLIER: Final[float] = 1.35
+FINGERTIP_SMOOTHING: Final[float] = 0.55
 INDEX_FINGER_LANDMARK: Final[int] = 8
 MIDDLE_FINGER_LANDMARK: Final[int] = 12
 DETECTION_CONFIDENCE: Final[float] = 0.5
 TRACKING_CONFIDENCE: Final[float] = 0.5
-WINDOW_TITLE: Final[str] = "Hand Tracking Calculator"
 EXPRESSION_POSITION: Final[Position] = (50, 80)
 EXPRESSION_FONT_SCALE: Final[float] = 1.5
 LABEL_FONT_SCALE: Final[float] = 0.8
@@ -48,9 +50,8 @@ BUTTON_CONFIGS: Final[tuple[ButtonConfig, ...]] = (
     ButtonConfig("2", (110, 220), WHITE),
     ButtonConfig("3", (170, 220), WHITE),
     ButtonConfig("-", (230, 220), WHITE),
-    ButtonConfig("C", (50, 280), WHITE),
+    ButtonConfig("CLR", (50, 280), RED),
     ButtonConfig("0", (110, 280), WHITE),
     ButtonConfig("=", (170, 280), WHITE),
     ButtonConfig("+", (230, 280), WHITE),
-    ButtonConfig("Close", (400, 280), RED),
 )

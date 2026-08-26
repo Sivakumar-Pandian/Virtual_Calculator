@@ -28,3 +28,6 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+
+# Local interview preparation notes
+INTERVIEW_GUIDE.md

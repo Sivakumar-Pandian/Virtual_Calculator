@@ -11,7 +11,7 @@ This virtual calculator uses your **webcam** to detect your **hand movements** a
 
 * Press calculator buttons by pinching (index + middle finger)
 * Build and evaluate mathematical expressions
-* Clear the screen or close the app with a hand gesture
+* Clear the screen with the `CLR` button
 * Interact like a futuristic tech wizard 🧙‍♂️
 
 ---
@@ -42,8 +42,8 @@ This virtual calculator uses your **webcam** to detect your **hand movements** a
 * 🔢 Functional calculator with basic operations: `+`, `-`, `*`, `/`
 * ❌ "C" to clear expression
 * ✅ "=" to evaluate
-* 🔴 "Close" button to quit
-* 🧠 Smart debounce to avoid accidental multiple clicks
+* 🧼 `CLR` button to clear the expression
+* 🧠 Smoothed fingertips and stable pinch detection to avoid accidental clicks
 
 ---
 
@@ -54,8 +54,17 @@ This virtual calculator uses your **webcam** to detect your **hand movements** a
 ```bash
 python3 -m venv .venv
 .venv/bin/python -m pip install -r requirements.txt
-.venv/bin/python main.py
+.venv/bin/python app.py
 ```
+
+Open [http://localhost:5000](http://localhost:5000) in a browser after starting the server.
+
+## Why Flask and MJPEG?
+
+* Flask serves the calculator UI and exposes the webcam stream through a normal HTTP endpoint.
+* The `/video_feed` route yields each processed OpenCV frame as a JPEG.
+* Flask wraps those JPEGs in a `multipart/x-mixed-replace` response, so the browser updates the `<img>` continuously without JavaScript or a native OpenCV window.
+* This keeps camera capture, hand tracking, and rendering on the server while making the result accessible from any browser on the local machine.
 
 ## 🧽 Future Upgrades
 
