@@ -73,6 +73,7 @@
       let stream;
       let busy = false;
       let sending = false;
+      let frameCount = 0;
 
       function setStatus(message) {
         status.textContent = message;
@@ -82,8 +83,10 @@
         try {
           stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
           video.srcObject = stream;
+          await video.play();
           cameraOff.style.display = "none";
           setStatus("Camera ready, processing...");
+          beginProcessing();
         } catch (error) {
           cameraOff.style.display = "block";
           cameraOff.firstElementChild.textContent = "Camera permission was not granted. Enable it and try again.";
@@ -114,7 +117,8 @@
               const response = await fetch("{{ url_for('process_frame') }}", { method: "POST", body: data });
               if (!response.ok) throw new Error("Server returned " + response.status);
               processed.src = URL.createObjectURL(await response.blob());
-              setStatus("Camera stream live");
+              frameCount += 1;
+              setStatus("Camera stream live - processed " + frameCount + " frames");
             } catch (error) {
               setStatus("Processing error: " + error.message);
             } finally {
@@ -125,12 +129,15 @@
         setTimeout(() => requestAnimationFrame(sendFrame), 80);
       }
 
-      video.addEventListener("playing", () => {
+      function beginProcessing() {
         if (!sending) {
           sending = true;
           requestAnimationFrame(sendFrame);
         }
-      });
+      }
+
+      video.addEventListener("loadeddata", beginProcessing);
+      video.addEventListener("playing", beginProcessing);
       startButton.addEventListener("click", startCamera);
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         cameraOff.style.display = "block";
