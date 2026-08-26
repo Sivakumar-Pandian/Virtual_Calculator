@@ -88,8 +88,9 @@
         if (!stream) return;
         if (!busy && video.videoWidth) {
           busy = true;
-          canvas.width = video.videoWidth;
-          canvas.height = video.videoHeight;
+          const scale = Math.min(1, 640 / video.videoWidth);
+          canvas.width = Math.round(video.videoWidth * scale);
+          canvas.height = Math.round(video.videoHeight * scale);
           canvas.getContext("2d").drawImage(video, 0, 0);
           canvas.toBlob(async (blob) => {
             const data = new FormData();

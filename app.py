@@ -11,6 +11,7 @@ from main import GestureCalculatorApp
 
 app = Flask(__name__)
 calculator = GestureCalculatorApp()
+app.config["MAX_CONTENT_LENGTH"] = 2 * 1024 * 1024
 
 
 def cleanup() -> None:
@@ -38,6 +39,10 @@ def process_frame() -> Response:
     )
     if frame is None:
         return jsonify(error="The uploaded frame is not a valid image."), 400
+    height, width = frame.shape[:2]
+    if width > 640:
+        scale = 640 / width
+        frame = cv2.resize(frame, (640, int(height * scale)))
     return Response(calculator.process_frame(frame), mimetype="image/jpeg")
 
 

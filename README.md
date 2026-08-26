@@ -66,6 +66,7 @@ Create a Render Web Service connected to the `main` branch. Leave **Root Directo
 ```text
 Build Command: pip install -r requirements.txt
 Start Command: gunicorn --bind 0.0.0.0:$PORT app:app
+Start Command: gunicorn --bind 0.0.0.0:$PORT --timeout 120 app:app
 ```
 
 In Render's **Environment Variables**, add `PYTHON_VERSION` with the value `3.12.8`. This is required because the pinned MediaPipe dependency does not support Render's default Python 3.14 runtime. No secret keys or other environment variables are required. After saving the variable, trigger a new deploy.
