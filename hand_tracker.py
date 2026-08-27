@@ -1,6 +1,7 @@
-"""MediaPipe hand tracking used by the calculator application."""
+"""Small functions for detecting and smoothing two fingertip positions."""
 
-from typing import Optional
+from dataclasses import dataclass
+from typing import Any
 
 import cv2
 import mediapipe as mp
@@ -17,55 +18,58 @@ from config import (
 Fingertips = tuple[tuple[int, int], tuple[int, int]]
 
 
-class HandTracker:
-    """Finds the index and middle fingertips in webcam frames."""
+@dataclass
+class HandTrackingState:
+    """MediaPipe pipeline and the previous points used for smoothing."""
 
-    def __init__(self) -> None:
-        """Create one MediaPipe Hands pipeline for the application's lifetime."""
-        hands_module = mp.solutions.hands
-        self._hands = hands_module.Hands(
-            static_image_mode=False,
-            max_num_hands=1,
-            model_complexity=0,
-            min_detection_confidence=DETECTION_CONFIDENCE,
-            min_tracking_confidence=TRACKING_CONFIDENCE,
-        )
-        self._smoothed_fingertips: Optional[Fingertips] = None
+    hands: Any
+    previous_fingertips: Fingertips | None = None
 
-    def get_fingertips(self, frame: np.ndarray) -> Optional[Fingertips]:
-        """Return fingertip pixels, or None when no complete hand is visible."""
-        height, width = frame.shape[:2]
-        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        results = self._hands.process(rgb_frame)
-        if not results.multi_hand_landmarks:
-            self._smoothed_fingertips = None
-            return None
-        landmarks = results.multi_hand_landmarks[0].landmark
-        index = landmarks[INDEX_FINGER_LANDMARK]
-        middle = landmarks[MIDDLE_FINGER_LANDMARK]
-        fingertips = (
-            (int(index.x * width), int(index.y * height)),
-            (int(middle.x * width), int(middle.y * height)),
-        )
-        if self._smoothed_fingertips is None:
-            self._smoothed_fingertips = fingertips
-            return fingertips
-        previous_index, previous_middle = self._smoothed_fingertips
-        smoothed = (
-            self._smooth_point(previous_index, fingertips[0]),
-            self._smooth_point(previous_middle, fingertips[1]),
-        )
-        self._smoothed_fingertips = smoothed
-        return smoothed
 
-    @staticmethod
-    def _smooth_point(previous: tuple[int, int], current: tuple[int, int]) -> tuple[int, int]:
-        """Reduce landmark jitter while keeping the pointer responsive."""
-        return (
-            int(previous[0] * FINGERTIP_SMOOTHING + current[0] * (1 - FINGERTIP_SMOOTHING)),
-            int(previous[1] * FINGERTIP_SMOOTHING + current[1] * (1 - FINGERTIP_SMOOTHING)),
-        )
+def create_hand_tracker() -> HandTrackingState:
+    """Create one MediaPipe pipeline for the application's lifetime."""
+    hands = mp.solutions.hands.Hands(
+        static_image_mode=False,
+        max_num_hands=1,
+        model_complexity=0,
+        min_detection_confidence=DETECTION_CONFIDENCE,
+        min_tracking_confidence=TRACKING_CONFIDENCE,
+    )
+    return HandTrackingState(hands=hands)
 
-    def close(self) -> None:
-        """Release MediaPipe resources so the native pipeline shuts down cleanly."""
-        self._hands.close()
+
+def get_fingertips(state: HandTrackingState, frame: np.ndarray) -> Fingertips | None:
+    """Return index and middle fingertip pixels, or None without a hand."""
+    height, width = frame.shape[:2]
+    rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    results = state.hands.process(rgb_frame)
+    if not results.multi_hand_landmarks:
+        state.previous_fingertips = None
+        return None
+
+    landmarks = results.multi_hand_landmarks[0].landmark
+    current = (
+        (int(landmarks[INDEX_FINGER_LANDMARK].x * width), int(landmarks[INDEX_FINGER_LANDMARK].y * height)),
+        (int(landmarks[MIDDLE_FINGER_LANDMARK].x * width), int(landmarks[MIDDLE_FINGER_LANDMARK].y * height)),
+    )
+    if state.previous_fingertips is None:
+        state.previous_fingertips = current
+        return current
+
+    previous_index, previous_middle = state.previous_fingertips
+    smoothed = (_smooth_point(previous_index, current[0]), _smooth_point(previous_middle, current[1]))
+    state.previous_fingertips = smoothed
+    return smoothed
+
+
+def _smooth_point(previous: tuple[int, int], current: tuple[int, int]) -> tuple[int, int]:
+    """Reduce landmark jitter while keeping the pointer responsive."""
+    return (
+        int(previous[0] * FINGERTIP_SMOOTHING + current[0] * (1 - FINGERTIP_SMOOTHING)),
+        int(previous[1] * FINGERTIP_SMOOTHING + current[1] * (1 - FINGERTIP_SMOOTHING)),
+    )
+
+
+def close_hand_tracker(state: HandTrackingState) -> None:
+    """Release MediaPipe's native resources."""
+    state.hands.close()

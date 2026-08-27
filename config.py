@@ -33,10 +33,6 @@ FONT_THICKNESS: Final[int] = 2
 BLACK: Final[Color] = (0, 0, 0)
 WHITE: Final[Color] = (255, 255, 255)
 RED: Final[Color] = (0, 0, 255)
-OVERLAY_WEIGHT: Final[float] = 0.6
-FRAME_WEIGHT: Final[float] = 0.4
-EXIT_KEY: Final[int] = 27
-
 BUTTON_CONFIGS: Final[tuple[ButtonConfig, ...]] = (
     ButtonConfig("7", (48, 112), WHITE),
     ButtonConfig("8", (113, 112), WHITE),

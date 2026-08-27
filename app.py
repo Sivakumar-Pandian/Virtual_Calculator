@@ -7,16 +7,16 @@ import cv2
 import numpy as np
 from flask import jsonify, request
 
-from main import GestureCalculatorApp
+from main import close_calculator, create_calculator, process_frame as render_frame
 
 app = Flask(__name__)
-calculator = GestureCalculatorApp()
+calculator = create_calculator()
 app.config["MAX_CONTENT_LENGTH"] = 2 * 1024 * 1024
 
 
 def cleanup() -> None:
     """Release camera and MediaPipe resources when the server exits."""
-    calculator.close()
+    close_calculator(calculator)
 
 
 atexit.register(cleanup)
@@ -43,7 +43,7 @@ def process_frame() -> Response:
     if width > 640:
         scale = 640 / width
         frame = cv2.resize(frame, (640, int(height * scale)))
-    return Response(calculator.process_frame(frame), mimetype="image/jpeg")
+    return Response(render_frame(calculator, frame), mimetype="image/jpeg")
 
 
 if __name__ == "__main__":

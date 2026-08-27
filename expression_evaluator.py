@@ -1,13 +1,15 @@
-"""Safe arithmetic expression handling for the calculator."""
+"""Build and safely evaluate the calculator expression."""
 
 import ast
 import operator
-from typing import Final, Callable
+from collections.abc import Callable
+from typing import Final
 
 
 Number = int | float
-Operator = Callable[..., Number]
-OPERATORS: Final[dict[type[ast.operator], Operator]] = {
+Operation = Callable[..., Number]
+
+ALLOWED_OPERATIONS: Final[dict[type[ast.operator], Operation]] = {
     ast.Add: operator.add,
     ast.Sub: operator.sub,
     ast.Mult: operator.mul,
@@ -17,36 +19,25 @@ OPERATORS: Final[dict[type[ast.operator], Operator]] = {
 }
 
 
-class ExpressionEvaluator:
-    """Builds calculator expressions and evaluates only approved AST nodes."""
+def evaluate_expression(expression: str) -> str:
+    """Return an arithmetic result, or ``Error`` for invalid input."""
+    try:
+        tree = ast.parse(expression, mode="eval")
+        return str(evaluate_node(tree.body))
+    except (ArithmeticError, SyntaxError, TypeError, ValueError):
+        return "Error"
 
-    def __init__(self) -> None:
-        """Start with an empty expression, matching the original calculator."""
-        self.expression = ""
 
-    def append(self, value: str) -> None:
-        """Append a button label so expression construction remains centralized."""
-        self.expression += value
+def evaluate_node(node: ast.AST) -> Number:
+    """Evaluate one approved AST node recursively."""
+    if isinstance(node, ast.Constant) and isinstance(node.value, (int, float)):
+        return node.value
 
-    def clear(self) -> None:
-        """Clear all entered text when the user presses the C button."""
-        self.expression = ""
+    if isinstance(node, ast.BinOp) and type(node.op) in ALLOWED_OPERATIONS:
+        operation = ALLOWED_OPERATIONS[type(node.op)]
+        return operation(evaluate_node(node.left), evaluate_node(node.right))
 
-    def evaluate(self) -> None:
-        """Replace the expression with its result or Error without raising to the UI."""
-        try:
-            tree = ast.parse(self.expression, mode="eval")
-            self.expression = str(self._evaluate_node(tree.body))
-        except (ArithmeticError, SyntaxError, TypeError, ValueError):
-            self.expression = "Error"
+    if isinstance(node, ast.UnaryOp) and type(node.op) in ALLOWED_OPERATIONS:
+        return ALLOWED_OPERATIONS[type(node.op)](evaluate_node(node.operand))
 
-    def _evaluate_node(self, node: ast.AST) -> Number:
-        """Recursively calculate a whitelisted arithmetic tree and reject everything else."""
-        if isinstance(node, ast.Constant) and isinstance(node.value, (int, float)):
-            return node.value
-        if isinstance(node, ast.BinOp) and type(node.op) in OPERATORS:
-            operation = OPERATORS[type(node.op)]
-            return operation(self._evaluate_node(node.left), self._evaluate_node(node.right))
-        if isinstance(node, ast.UnaryOp) and type(node.op) in OPERATORS:
-            return OPERATORS[type(node.op)](self._evaluate_node(node.operand))
-        raise ValueError("Unsupported expression")
+    raise ValueError("Unsupported expression")
