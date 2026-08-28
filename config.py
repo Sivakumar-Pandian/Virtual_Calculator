@@ -1,7 +1,6 @@
 """Application configuration for the gesture-controlled calculator."""
 
 from dataclasses import dataclass
-from typing import Final
 
 Color = tuple[int, int, int]
 Position = tuple[int, int]
@@ -16,24 +15,24 @@ class ButtonConfig:
     color: Color
 
 
-BUTTON_SIZE: Final[int] = 58
-PINCH_DISTANCE_THRESHOLD: Final[float] = 30.0
-CLICK_DEBOUNCE_SECONDS: Final[float] = 0.3
-PINCH_REQUIRED_FRAMES: Final[int] = 2
-PINCH_RELEASE_MULTIPLIER: Final[float] = 1.35
-FINGERTIP_SMOOTHING: Final[float] = 0.55
-INDEX_FINGER_LANDMARK: Final[int] = 8
-MIDDLE_FINGER_LANDMARK: Final[int] = 12
-DETECTION_CONFIDENCE: Final[float] = 0.5
-TRACKING_CONFIDENCE: Final[float] = 0.5
-EXPRESSION_POSITION: Final[Position] = (55, 83)
-EXPRESSION_FONT_SCALE: Final[float] = 1.15
-LABEL_FONT_SCALE: Final[float] = 0.72
-FONT_THICKNESS: Final[int] = 2
-BLACK: Final[Color] = (0, 0, 0)
-WHITE: Final[Color] = (255, 255, 255)
-RED: Final[Color] = (0, 0, 255)
-BUTTON_CONFIGS: Final[tuple[ButtonConfig, ...]] = (
+BUTTON_SIZE: int = 58
+PINCH_DISTANCE_THRESHOLD: float = 30.0
+CLICK_DEBOUNCE_SECONDS: float = 0.3
+PINCH_REQUIRED_FRAMES: int = 2
+PINCH_RELEASE_MULTIPLIER: float = 1.35
+FINGERTIP_SMOOTHING: float = 0.55
+INDEX_FINGER_LANDMARK: int = 8
+MIDDLE_FINGER_LANDMARK: int = 12
+DETECTION_CONFIDENCE: float = 0.5
+TRACKING_CONFIDENCE: float = 0.5
+EXPRESSION_POSITION: Position = (55, 83)
+EXPRESSION_FONT_SCALE: float = 1.15
+LABEL_FONT_SCALE: float = 0.72
+FONT_THICKNESS: int = 2
+BLACK: Color = (0, 0, 0)
+WHITE: Color = (255, 255, 255)
+RED: Color = (0, 0, 255)
+BUTTON_CONFIGS: tuple[ButtonConfig, ...] = (
     ButtonConfig("7", (48, 112), WHITE),
     ButtonConfig("8", (113, 112), WHITE),
     ButtonConfig("9", (178, 112), WHITE),
